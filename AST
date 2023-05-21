@@ -1,0 +1,112 @@
+#ifndef AST_H
+#define AST_H
+
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+
+class AST;
+class Expr;
+class Factor;
+class BinaryOp;
+class Assignment;
+class Ident;
+class Number;
+
+class ASTVisitor {
+public:
+  virtual void visit(AST &){};
+  virtual void visit(Expr &){};
+  virtual void visit(Factor &) = 0;
+  virtual void visit(BinaryOp &) = 0;
+  virtual void visit(Assignment &) = 0;
+  virtual void visit(Ident &) = 0;
+  virtual void visit(Number &) = 0;
+};
+
+class AST {
+public:
+  virtual ~AST() {}
+  virtual void accept(ASTVisitor &V) = 0;
+};
+
+class Expr : public AST {
+public:
+  Expr() {}
+};
+
+class Factor : public Expr {
+public:
+  enum ValueKind { Ident, Number};
+
+private:
+  ValueKind Kind;
+  llvm::StringRef Val;
+
+public:
+  Factor(ValueKind Kind, llvm::StringRef Val) : Kind(Kind) {}
+  ValueKind getKind() { return Kind; }
+  virtual void accept(ASTVisitor &V) override {
+    V.visit(*this);
+  }
+};
+
+class Ident : public Factor {
+private:
+  llvm::StringRef Name;
+
+public:
+  Ident(llvm::StringRef Name) : Factor(Ident), Name(Name) {}
+  llvm::StringRef getName() { return Name; }
+  virtual void accept(ASTVisitor &V) override {
+    V.visit(*this);
+  }
+};
+
+class Number : public Factor {
+private:
+  llvm::StringRef Value;
+
+public:
+  Number(llvm::StringRef Value) : Factor(Number), Value(Value) {}
+  llvm::StringRef getValue() { return Value; }
+  virtual void accept(ASTVisitor &V) override {
+    V.visit(*this);
+  }
+};
+
+class BinaryOp : public Expr {
+public:
+  enum Operator { Plus, Minus, Mul, Div };
+
+private:
+  Expr *Left;
+  Expr *Right;
+  Operator Op;
+
+public:
+  BinaryOp(Operator Op, Expr *L, Expr *R)
+      : Op(Op), Left(L), Right(R) {}
+  Expr *getLeft() { return Left; }
+  Expr *getRight() { return Right; }
+  Operator getOperator() { return Op; }
+  virtual void accept(ASTVisitor &V) override {
+    V.visit(*this);
+  }
+};
+
+class Assignment : public AST {
+private:
+  Ident *Identifier;
+  Expr *Expression;
+
+public:
+  Assignment(Ident *Identifier, Expr *Expression)
+      : Identifier(Identifier), Expression(Expression) {}
+  Ident *getIdentifier() { return Identifier; }
+  Expr *getExpression() { return Expression; }
+  virtual void accept(ASTVisitor &V) override {
+    V.visit(*this);
+  }
+};
+
+#endif
